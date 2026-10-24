@@ -6,8 +6,7 @@ demonstrations, train a vision-language-action model, serve it, and run it with
 hardware in the loop: the simulator on a Dell Pro Max workstation and the model
 on an NVIDIA Jetson AGX Thor.
 
-**Read it:** open `index.html`, or publish this repository with GitHub Pages
-(Settings → Pages → Deploy from a branch → `main`, folder `/`).
+**Live course:** https://kabilankb.github.io/rebot-duo-course/
 
 ![SmolVLA served from the Jetson Thor completes the task on an unseen layout](media/hil_thor_success_seed1015.gif)
 
