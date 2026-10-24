@@ -38,7 +38,7 @@ training, not the hardware.
 ## Code
 
 The package this course uses is
-[rebot-bimanual-vla](https://github.com/kabilankb/rebot-bimanual-vla).
+[`package/`](package/) (`rebot-bimanual-vla`).
 
 ## Layout
 
@@ -46,6 +46,7 @@ The package this course uses is
 index.html   the course, one self-contained page (Google Fonts are the only external request)
 media/       GIFs and images the page shows
 .nojekyll    tells GitHub Pages to serve the files as they are
+package/     the rebot-bimanual-vla Python package: embodiment, SmolVLA runtime, sim client, tests
 ```
 
 ## License

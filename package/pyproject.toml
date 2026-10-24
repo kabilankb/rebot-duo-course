@@ -1,0 +1,40 @@
+[project]
+name = "rebot-bimanual-vla"
+version = "0.1.0"
+description = "reBot Duo: Sim-to-Policy. Simulate, collect, train and serve VLA policies for two reBot B601 arms"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "kabilankb" }]
+# vla-edge (https://github.com/Agents2AgentsAI/vla-edge) and rebot-sim-pipeline
+# are not on PyPI: install them from their checkouts first (see README).
+dependencies = [
+    "numpy>=1.24",
+    "json-numpy>=2.0",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+replay = ["pyarrow>=14"]
+dev = ["pytest>=8.0", "ruff>=0.6", "httpx>=0.27", "pyarrow>=14"]
+
+[project.scripts]
+rebot-vla-serve = "rebot_vla.serve:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rebot_vla"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint.isort]
+known-first-party = ["rebot_vla"]
+known-third-party = ["vla_edge", "rebot_sim_pipeline"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
