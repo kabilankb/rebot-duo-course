@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A hands-on course: simulate two reBot B601 arms in Isaac Lab, collect demonstrations, train SmolVLA, and serve it with hardware in the loop on a Jetson AGX Thor.">
+<title>reBot Duo: Sim-to-Policy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a lab manual on white paper. Course map strip up top, sticky module index on the left, modules read top to bottom. */
+:root {
+  --paper: #ffffff;
+  --ink: #15201b;
+  --muted: #56655d;
+  --rule: #e2e8e4;
+  --tint: #f3f7f4;
+  --green: #1d7a4c;
+  --green-soft: #e6f2eb;
+  --amber: #8a5a00;
+  --amber-soft: #fbf1dc;
+  --slate-soft: #eef1f4;
+  --slate: #4a5866;
+  --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+a { color: var(--green); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 3px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 3.1rem); font-weight: 800; font-stretch: 80%; letter-spacing: -0.01em; }
+h2 { font-size: 1.75rem; font-weight: 750; font-stretch: 85%; }
+h3 { font-size: 1.05rem; font-weight: 700; font-stretch: 95%; }
+p { margin: 0; max-width: 68ch; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--tint); padding: 0.1em 0.35em; border-radius: 3px; }
+.eyebrow { font: 600 0.72rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--green); }
+.wrap { max-width: 1160px; margin: 0 auto; }
+
+/* Header */
+header.top { padding-block: 48px 28px; border-bottom: 1px solid var(--rule); display: grid; gap: 16px; }
+header.top .lede { font-size: 1.08rem; color: var(--muted); max-width: 70ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font: 0.8rem/1.4 var(--mono); color: var(--muted); }
+.meta b { color: var(--ink); font-weight: 500; }
+
+/* Course map */
+.map { padding-block: 28px; border-bottom: 1px solid var(--rule); display: grid; gap: 14px; }
+.map ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; }
+.map li { position: relative; padding: 14px 16px 14px 0; border-top: 3px solid var(--rule); }
+.map li.done { border-top-color: var(--green); }
+.map li.live { border-top-color: var(--amber); }
+.map li a { text-decoration: none; color: inherit; display: grid; gap: 4px; }
+.map .n { font: 500 0.75rem/1 var(--mono); color: var(--muted); }
+.map .t { font: 700 1.02rem/1.2 var(--display); font-stretch: 90%; }
+.map .s { font-size: 0.82rem; color: var(--muted); }
+
+/* Body layout */
+.layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; padding-block: 36px 80px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 20px); align-self: start; display: grid; gap: 6px; font-size: 0.88rem; }
+nav.toc a { color: var(--muted); text-decoration: none; padding: 3px 0 3px 10px; border-left: 2px solid var(--rule); }
+nav.toc a:hover { color: var(--ink); border-left-color: var(--green); }
+nav.toc .h { font: 600 0.7rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+main { display: grid; gap: 64px; min-width: 0; }
+
+section.module { display: grid; gap: 22px; min-width: 0; scroll-margin-top: 20px; }
+.mhead { display: grid; gap: 8px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); }
+.mhead .row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 16px; }
+.goals { display: grid; gap: 6px; padding: 16px 18px; background: var(--tint); border-radius: 6px; }
+.goals h3 { font-size: 0.78rem; font-family: var(--mono); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.goals ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; }
+
+.step { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 4px 14px; }
+.step .num { font: 600 0.8rem/1 var(--mono); color: var(--green); border: 1.5px solid var(--green); border-radius: 50%; width: 28px; height: 28px; display: grid; place-items: center; margin-top: 1px; }
+.step .body { display: grid; gap: 10px; min-width: 0; }
+
+/* Status chips */
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 500 0.72rem/1 var(--mono); padding: 5px 8px; border-radius: 99px; white-space: nowrap; }
+.chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.chip.ok { background: var(--green-soft); color: var(--green); }
+.chip.run { background: var(--amber-soft); color: var(--amber); }
+.chip.todo { background: var(--slate-soft); color: var(--slate); }
+
+/* Code */
+.code { position: relative; border: 1px solid var(--rule); border-radius: 6px; background: var(--tint); min-width: 0; }
+.code pre { margin: 0; padding: 14px 16px; overflow-x: auto; font: 0.8rem/1.6 var(--mono); color: var(--ink); white-space: pre; }
+.code .label { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 8px 6px 16px; border-bottom: 1px solid var(--rule); font: 0.72rem/1 var(--mono); color: var(--muted); }
+.code button { font: 500 0.72rem/1 var(--mono); color: var(--green); background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 5px 9px; cursor: pointer; }
+.code button:hover { border-color: var(--green); }
+.c { color: #6b7a72; }
+
+/* Tables */
+.tablebox { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--rule); }
+tr:last-child td { border-bottom: 0; }
+th { font: 600 0.7rem/1.3 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--tint); white-space: nowrap; }
+td.num, th.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+/* Callouts */
+.check { display: grid; gap: 4px; padding: 12px 16px; border-left: 3px solid var(--green); background: var(--green-soft); border-radius: 0 6px 6px 0; font-size: 0.9rem; }
+.check b { font: 600 0.72rem/1.2 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--green); }
+.pitfall { display: grid; gap: 4px; padding: 12px 16px; border-left: 3px solid var(--amber); background: var(--amber-soft); border-radius: 0 6px 6px 0; font-size: 0.9rem; }
+.pitfall b { font: 600 0.72rem/1.2 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber); }
+
+/* Scene diagram */
+.scene { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.scene svg { width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
+.facts { display: grid; gap: 0; margin: 0; }
+.facts div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 0.88rem; }
+.facts dt { font: 500 0.75rem/1.5 var(--mono); color: var(--muted); }
+.facts dd { margin: 0; }
+
+/* Model cards */
+.models { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.model { display: grid; grid-template-rows: auto auto 1fr; gap: 10px; padding: 16px; border: 1px solid var(--rule); border-radius: 6px; min-width: 0; }
+.model.primary { border-color: var(--green); }
+.model .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.model dl { margin: 0; display: grid; gap: 6px; font-size: 0.84rem; }
+.model dl div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 8px; }
+.model dt { color: var(--muted); font: 0.74rem/1.6 var(--mono); }
+.model dd { margin: 0; }
+
+.flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.flow div { padding: 14px; border-right: 1px solid var(--rule); display: grid; gap: 4px; align-content: start; }
+.flow div:last-child { border-right: 0; }
+.flow b { font: 700 0.95rem/1.2 var(--display); font-stretch: 90%; }
+.flow span { font-size: 0.8rem; color: var(--muted); }
+.flow code { font-size: 0.74rem; }
+
+.spec { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.spec > div { padding: 16px; display: grid; gap: 10px; align-content: start; border-right: 1px solid var(--rule); min-width: 0; }
+.spec > div:last-child { border-right: 0; }
+.spec .head { display: grid; gap: 2px; }
+.spec .brand { font: 700 1.1rem/1.2 var(--display); font-stretch: 90%; }
+.spec .sub { font-size: 0.8rem; color: var(--muted); }
+.spec dl { margin: 0; display: grid; gap: 7px; font-size: 0.84rem; }
+.spec dl div { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px; }
+.spec dt { font: 0.72rem/1.6 var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.spec dd { margin: 0; font-variant-numeric: tabular-nums; }
+@media (max-width: 960px) { .spec { grid-template-columns: minmax(0, 1fr); } .spec > div { border-right: 0; border-bottom: 1px solid var(--rule); } .spec > div:last-child { border-bottom: 0; } }
+/* HIL architecture */
+.arch { display: grid; grid-template-columns: minmax(0, 1fr) 190px minmax(0, 1fr); gap: 0; align-items: stretch; }
+.node { border: 1px solid var(--rule); border-radius: 8px; padding: 16px; display: grid; gap: 12px; align-content: start; min-width: 0; background: var(--paper); }
+.node.thor { border-color: var(--green); }
+.node .head { display: grid; gap: 2px; }
+.node .brand { font: 700 1.1rem/1.2 var(--display); font-stretch: 90%; }
+.node .addr { font: 0.76rem/1.4 var(--mono); color: var(--muted); }
+.node img { width: 100%; max-width: 250px; height: auto; justify-self: center; }
+.stack { display: grid; gap: 6px; }
+.layer { display: grid; gap: 2px; padding: 9px 11px; border: 1px solid var(--rule); border-radius: 5px; background: var(--tint); }
+.layer b { font: 600 0.84rem/1.3 var(--body); }
+.layer span { font-size: 0.78rem; color: var(--muted); }
+.layer.key { background: var(--green-soft); border-color: transparent; }
+.link { display: grid; align-content: center; gap: 14px; padding: 12px 10px; }
+.wire { display: grid; gap: 3px; font-size: 0.76rem; color: var(--muted); }
+.wire .arrow { height: 2px; background: var(--ink); position: relative; }
+.wire .arrow::after { content: ""; position: absolute; top: -4px; border: 5px solid transparent; }
+.wire.right .arrow::after { right: -2px; border-left: 7px solid var(--ink); border-right: 0; }
+.wire.left .arrow::after { left: -2px; border-right: 7px solid var(--ink); border-left: 0; }
+.wire.once .arrow { background: repeating-linear-gradient(90deg, var(--muted) 0 5px, transparent 5px 9px); }
+.wire.once .arrow::after { border-left-color: var(--muted); }
+.wire b { font: 600 0.76rem/1.3 var(--mono); color: var(--ink); }
+.net { font: 0.74rem/1.4 var(--mono); color: var(--amber); text-align: center; padding: 6px; border: 1px dashed var(--amber); border-radius: 5px; }
+@media (max-width: 960px) {
+  .arch { grid-template-columns: minmax(0, 1fr); }
+  .link { padding: 14px 4px; }
+  .wire .arrow { display: none; }
+}
+figure.media { margin: 0; display: grid; gap: 8px; min-width: 0; }
+figure.media img { display: block; width: 100%; max-width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--tint); }
+figure.media.narrow img { max-width: 440px; }
+figure.media figcaption { font-size: 0.82rem; color: var(--muted); max-width: 68ch; }
+footer { border-top: 1px solid var(--rule); padding-block: 22px 40px; font-size: 0.82rem; color: var(--muted); display: grid; gap: 4px; }
+
+@media (max-width: 960px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  nav.toc { position: static; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  nav.toc .h { grid-column: 1 / -1; }
+  .models { grid-template-columns: minmax(0, 1fr); }
+  .scene { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .map ol { grid-template-columns: minmax(0, 1fr); }
+  .map li { padding: 10px 0; border-top-width: 0; border-left: 3px solid var(--rule); padding-left: 12px; }
+  .map li.done { border-left-color: var(--green); }
+  .map li.live { border-left-color: var(--amber); }
+  .flow { grid-template-columns: minmax(0, 1fr); }
+  .flow div { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .flow div:last-child { border-bottom: 0; }
+  .facts div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .step { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Hands-on course · Isaac Lab · LeRobot · vla-edge · Jetson Thor</span>
+    <h1>Bimanual reBot B601: from simulation on a Dell Pro Max to a served policy, with hardware in the loop on Jetson Thor</h1>
+    <p class="lede">Two Seeed reBot arms put two pens and an eraser into a pencil cup. In six modules you set up the scene, record scripted demonstrations, train vision-language-action models on them, run a trained model back in the simulator through an inference server, and finally move that model onto a Jetson AGX Thor, the robot's own computer, while the simulator keeps running on the workstation.</p>
+    <div class="meta">
+      <span>Robot <b>2 × reBot B601, 6 joints + gripper</b></span>
+      <span>Control <b>30 Hz, absolute joint targets</b></span>
+      <span>Data <b>52 episodes · 70,884 frames</b></span>
+      <span>Workstation <b>Dell Pro Max 16 Plus · RTX PRO 5000 24 GB</b></span>
+    </div>
+  </header>
+
+  <section class="map" aria-label="Course map">
+    <span class="eyebrow">Course map</span>
+    <ol>
+      <li class="done"><a href="#setup"><span class="n">Module 0</span><span class="t">Workstation setup</span><span class="s">Three Python envs</span></a></li>
+      <li class="done"><a href="#env"><span class="n">Module 1</span><span class="t">The bimanual scene</span><span class="s">Arms, cameras, success</span></a></li>
+      <li class="done"><a href="#data"><span class="n">Module 2</span><span class="t">Data collection</span><span class="s">Scripted expert → LeRobot v3</span></a></li>
+      <li class="done"><a href="#train"><span class="n">Module 3</span><span class="t">Training</span><span class="s">SmolVLA, ACT, π0.5</span></a></li>
+      <li class="live"><a href="#infer"><span class="n">Module 4</span><span class="t">Inference &amp; evaluation</span><span class="s">vla-edge server + sim client</span></a></li>
+      <li><a href="#hil"><span class="n">Module 5</span><span class="t">Hardware in the loop</span><span class="s">Policy on Jetson Thor</span></a></li>
+    </ol>
+  </section>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Modules">
+      <span class="h">Modules</span>
+      <a href="#setup">0 · Workstation setup</a>
+      <a href="#env">1 · The bimanual scene</a>
+      <a href="#data">2 · Data collection</a>
+      <a href="#train">3 · Training</a>
+      <a href="#infer">4 · Inference &amp; evaluation</a>
+      <a href="#hil">5 · Hardware in the loop</a>
+      <a href="#wire">Reference: wire format</a>
+    </nav>
+
+    <main>
+      <!-- MODULE 0 -->
+      <section class="module" id="setup">
+        <div class="mhead">
+          <span class="eyebrow">Module 0</span>
+          <div class="row"><h2>Workstation setup</h2><span class="chip ok">Set up on this machine</span></div>
+          <p>The stack spans three Python environments. Each one has a single job, so dependency conflicts stay contained. Isaac Sim pins its own Python, and the vla-edge server is deliberately light.</p>
+        </div>
+        <div class="goals">
+          <h3>You will be able to</h3>
+          <ul>
+            <li>Say which environment runs which stage, and why they are kept apart.</li>
+            <li>Install the three repositories in the right places.</li>
+            <li>Run the unit tests without a GPU or simulator.</li>
+          </ul>
+        </div>
+
+        <div class="spec" aria-label="This workstation">
+          <div>
+            <div class="head"><span class="eyebrow">Workstation</span><span class="brand">Dell Pro Max 16 Plus</span><span class="sub">Model MB16250 · BIOS 3.1.1</span></div>
+            <dl>
+              <div><dt>CPU</dt><dd>Intel Core Ultra 9 285HX, 24 cores, up to 5.5 GHz</dd></div>
+              <div><dt>GPU</dt><dd>NVIDIA RTX PRO 5000 Blackwell Laptop, 24 GB</dd></div>
+              <div><dt>Memory</dt><dd>128 GB RAM</dd></div>
+              <div><dt>Storage</dt><dd>Samsung PM9E1 NVMe, 2 TB</dd></div>
+            </dl>
+          </div>
+          <div>
+            <div class="head"><span class="eyebrow">Software</span><span class="brand">Ubuntu 24.04.4 LTS</span><span class="sub">Linux kernel 7.0.0-38</span></div>
+            <dl>
+              <div><dt>Driver</dt><dd>NVIDIA 595.99.02, CUDA 13.2</dd></div>
+              <div><dt>Simulator</dt><dd>Isaac Sim 6.0.1, <code>isaaclab</code> 6.1.17</dd></div>
+              <div><dt>Training</dt><dd>LeRobot 0.6.2, PyTorch 2.11 (CUDA 12.8)</dd></div>
+              <div><dt>Serving</dt><dd>vla-edge 0.1.0</dd></div>
+            </dl>
+          </div>
+          <div>
+            <div class="head"><span class="eyebrow">Measured on this machine</span><span class="brand">Throughput</span><span class="sub">24 October 2026 runs</span></div>
+            <dl>
+              <div><dt>Collect</dt><dd>≈ 100 s per episode, CPU physics</dd></div>
+              <div><dt>Train</dt><dd>SmolVLA 0.7 s/step at batch 32, 10.6 GB</dd></div>
+              <div><dt>Infer</dt><dd>≈ 160 ms per 50-step chunk</dd></div>
+              <div><dt>Evaluate</dt><dd>≈ 4.6 min per 90 s episode</dd></div>
+            </dl>
+          </div>
+        </div>
+
+        <div class="tablebox">
+          <table>
+            <thead><tr><th>Hardware in the scene</th><th>Maker</th><th>Details</th></tr></thead>
+            <tbody>
+              <tr><td>reBot B601 arm × 2</td><td>Seeed Studio</td><td>6-DOF arm with parallel gripper; follower arm of the reBot leader/follower teleoperation kit</td></tr>
+              <tr><td>Wrist camera × 2</td><td>Seeed Studio reBot kit</td><td>UVC32 camera on <code>link6</code>, 640×480, 4.2 mm lens</td></tr>
+              <tr><td>Workstation and top camera</td><td>YAMLab station</td><td>Table, YAM arm mounts and a calibrated top camera on a gate at 1.70 m</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tablebox">
+          <table>
+            <thead><tr><th>Environment</th><th>Python</th><th>Runs</th></tr></thead>
+            <tbody>
+              <tr><td><code>~/miniconda3/envs/env_yamlab6</code></td><td>Isaac Lab 3 / Isaac Sim 6</td><td>The scene, the scripted expert, the sim client (<code>sim_rollout</code>)</td></tr>
+              <tr><td><code>~/rebot_lerobot/.venv</code></td><td>3.12, LeRobot 0.6.2</td><td>Writing datasets, <code>lerobot-train</code>, serving SmolVLA checkpoints</td></tr>
+              <tr><td><code>~/vla-edge/.venv</code></td><td>3.14</td><td>The vla-edge server, replay policy, unit tests</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="step"><span class="num">1</span><div class="body">
+          <h3>Repositories</h3>
+          <p><code>rebot-sim-pipeline</code> holds the scene and data generator. <code>rebot-bimanual-vla</code> holds the embodiment, the policy runtimes and the sim client. <code>vla-edge</code> is the serving stack. The single-arm <code>rebot-arm-dli-isaacsim</code> project supplies robot, camera and stationery assets.</p>
+        </div></div>
+
+        <div class="step"><span class="num">2</span><div class="body">
+          <h3>Install</h3>
+          <div class="code"><div class="label"><span>shell</span><button type="button" data-copy>Copy</button></div><pre><span class="c"># server + tests (vla-edge venv)</span>
+python3 -m venv ~/vla-edge/.venv
+~/vla-edge/.venv/bin/pip install -e "$HOME/vla-edge[dev]" pyarrow
+~/vla-edge/.venv/bin/pip install --no-deps -e ~/rebot-sim-pipeline -e ~/rebot-bimanual-vla
+
+<span class="c"># sim client (Isaac Lab env)</span>
+~/miniconda3/envs/env_yamlab6/bin/pip install json-numpy
+~/miniconda3/envs/env_yamlab6/bin/pip install --no-deps -e ~/vla-edge
+
+<span class="c"># training + SmolVLA serving (LeRobot venv)</span>
+cd ~/rebot_lerobot/lerobot
+uv pip install --python ~/rebot_lerobot/.venv/bin/python -e ".[training,smolvla]"
+uv pip install --python ~/rebot_lerobot/.venv/bin/python fastapi uvicorn json-numpy
+uv pip install --python ~/rebot_lerobot/.venv/bin/python --no-deps -e ~/vla-edge -e ~/rebot-bimanual-vla</pre></div>
+        </div></div>
+
+        <div class="step"><span class="num">3</span><div class="body">
+          <h3>Unit tests</h3>
+          <div class="code"><div class="label"><span>shell</span><button type="button" data-copy>Copy</button></div><pre>cd ~/rebot-bimanual-vla &amp;&amp; ~/vla-edge/.venv/bin/pytest -q</pre></div>
+          <div class="check"><b>Check</b><span>10 passed: registration of both policies, wire conversions, the replay server over HTTP.</span></div>
+        </div></div>
+      </section>
+
+      <!-- MODULE 1 -->
+      <section class="module" id="env">
+        <div class="mhead">
+          <span class="eyebrow">Module 1</span>
+          <div class="row"><h2>The bimanual scene</h2><span class="chip ok">Verified</span></div>
+          <p>Two reBot B601 arms stand at YAMLab's YAM mounts and share one pencil cup. Each arm sorts the objects on its own side, one arm at a time, so the arms never meet over the cup.</p>
+        </div>
+        <div class="goals">
+          <h3>You will be able to</h3>
+          <ul>
+            <li>Describe the scene layout, the three cameras and the objects.</li>
+            <li>State the success rule the evaluation uses.</li>
+            <li>Watch a scripted dry run in the GUI.</li>
+          </ul>
+        </div>
+
+        <div class="scene">
+          <svg viewBox="0 0 420 300" role="img" aria-label="Top view of the workstation: left arm at y +0.305, right arm at y −0.305, both facing +X, cup at x 0.45 on the centre line">
+            <rect x="20" y="20" width="380" height="250" rx="4" fill="#f3f7f4" stroke="#e2e8e4"/>
+            <text x="30" y="40" fill="#56655d" font-family="IBM Plex Mono, monospace" font-size="10">table top z = 0.7517 m</text>
+            <line x1="60" y1="145" x2="390" y2="145" stroke="#e2e8e4" stroke-dasharray="4 4"/>
+            <text x="352" y="138" fill="#56655d" font-family="IBM Plex Mono, monospace" font-size="10">+X</text>
+            <!-- left arm -->
+            <rect x="70" y="72" width="34" height="28" rx="3" fill="#1d7a4c"/>
+            <text x="64" y="64" fill="#15201b" font-family="IBM Plex Mono, monospace" font-size="10">LeftArm (0.2525, +0.305)</text>
+            <line x1="104" y1="86" x2="150" y2="86" stroke="#1d7a4c" stroke-width="2"/>
+            <polygon points="150,81 159,86 150,91" fill="#1d7a4c"/>
+            <!-- right arm -->
+            <rect x="70" y="190" width="34" height="28" rx="3" fill="#1d7a4c"/>
+            <text x="64" y="236" fill="#15201b" font-family="IBM Plex Mono, monospace" font-size="10">RightArm (0.2525, −0.305)</text>
+            <line x1="104" y1="204" x2="150" y2="204" stroke="#1d7a4c" stroke-width="2"/>
+            <polygon points="150,199 159,204 150,209" fill="#1d7a4c"/>
+            <!-- cup -->
+            <circle cx="236" cy="145" r="14" fill="#ffffff" stroke="#15201b" stroke-width="2"/>
+            <text x="256" y="168" fill="#15201b" font-family="IBM Plex Mono, monospace" font-size="10">cup (0.45, 0)</text>
+            <!-- objects -->
+            <line x1="270" y1="78" x2="296" y2="92" stroke="#c0392b" stroke-width="4" stroke-linecap="round"/>
+            <text x="300" y="88" fill="#56655d" font-family="IBM Plex Mono, monospace" font-size="10">pen_red → left</text>
+            <line x1="262" y1="204" x2="290" y2="198" stroke="#2c5aa0" stroke-width="4" stroke-linecap="round"/>
+            <text x="294" y="204" fill="#56655d" font-family="IBM Plex Mono, monospace" font-size="10">pen_blue → right</text>
+            <rect x="182" y="180" width="16" height="10" rx="2" fill="#d98aa0"/>
+            <text x="164" y="200" fill="#56655d" font-family="IBM Plex Mono, monospace" font-size="10">eraser → nearer arm</text>
+            <text x="30" y="290" fill="#56655d" font-family="IBM Plex Mono, monospace" font-size="10">Top camera on the gate at 1.70 m · robot's left is +Y</text>
+          </svg>
+          <dl class="facts">
+            <div><dt>Arms</dt><dd>reBot B601, 6 revolute joints + parallel gripper each, facing +X</dd></div>
+            <div><dt>Cameras</dt><dd><code>top</code> (fx ≈ 392 px), <code>left_wrist</code>, <code>right_wrist</code> under each <code>link6</code>; all 640×480 RGB</dd></div>
+            <div><dt>Objects</dt><dd>Each lies 0.18–0.35 m in front of its arm, ≥ 5 cm from the others; new layout per seed</dd></div>
+            <div><dt>Grasp assist</dt><dd>A closed gripper carries a 4 mm pen rigidly: attach at command ≤ 0.014 m and opening ≤ 0.028 m</dd></div>
+            <div><dt>Success</dt><dd>Held 0.35 s: every object within 3.8 cm of the cup centre, pens within ~57° of vertical, everything slower than 0.25 m/s, both grippers open and empty</dd></div>
+            <div><dt>Episode limit</dt><dd>90 s of sim time in evaluation mode (2,700 steps)</dd></div>
+          </dl>
+        </div>
+
+        <div class="step"><span class="num">1</span><div class="body">
+          <h3>Watch one scripted dry run</h3>
+          <div class="code"><div class="label"><span>shell</span><button type="button" data-copy>Copy</button></div><pre>cd ~/rebot-sim-pipeline
+rebot-bimanual-generate -n 1 --gui --no-recording</pre></div>
+          <p>A window opens for each camera. The expert homes both arms to (0, −45, −45, 0, 0, 0)°, does the pens first, then the eraser, and holds 2 s at the end so the success check can settle.</p>
+        </div></div>
+      </section>
+
+      <!-- MODULE 2 -->
+      <section class="module" id="data">
+        <div class="mhead">
+          <span class="eyebrow">Module 2</span>
+          <div class="row"><h2>Data collection</h2><span class="chip ok">52 episodes collected</span></div>
+          <p>A scripted expert solves the task with inverse kinematics. Only successful episodes are kept, and they are written as a LeRobot v3 dataset in the real reBot leader/follower conventions, so the same files could train a policy for the physical arms.</p>
+        </div>
+        <div class="goals">
+          <h3>You will be able to</h3>
+          <ul>
+            <li>Collect N successful episodes on fresh layouts.</li>
+            <li>Read the dataset's features and conventions.</li>
+            <li>Check the data end to end with a replay before training.</li>
+            <li>Publish the dataset to the Hugging Face Hub.</li>
+          </ul>
+        </div>
+
+        <figure class="media">
+          <img src="media/dataset_viewer.gif" width="824" height="468" alt="Hugging Face dataset viewer for kabilanKB/rebot_bimanual_stationery: an episode plays on the top, left-wrist and right-wrist cameras while the joint state and action plots track it">
+          <figcaption>The collected dataset on the Hugging Face viewer: 52 episodes at 30 fps, three 640×480 cameras, and each joint's measured state (blue) against the commanded action (orange dashes). The state and action lines differ in sign on some joints because they use the follower and leader conventions.</figcaption>
+        </figure>
+
+        <div class="step"><span class="num">1</span><div class="body">
+          <h3>Collect</h3>
+          <div class="code"><div class="label"><span>shell</span><button type="button" data-copy>Copy</button></div><pre>cd ~/rebot-sim-pipeline
+rebot-bimanual-generate -n 50 --seed 100   <span class="c"># 50 successes on layouts 100, 101, …</span></pre></div>
+          <p>Each attempt samples a layout from <code>--seed</code> + attempt number. Reusing a seed repeats its layouts, so pick a new range for each batch. Failed attempts are discarded and retried, up to 2N + 5 attempts. The run stages episodes first and writes the LeRobot dataset with the LeRobot venv at the end, so new episodes appear only when the whole run finishes.</p>
+          <div class="tablebox">
+            <table>
+              <thead><tr><th>This run</th><th class="num">Value</th></tr></thead>
+              <tbody>
+                <tr><td>Attempts / successes</td><td class="num">52 / 50</td></tr>
+                <tr><td>Wall time per episode (CPU physics)</td><td class="num">≈ 95–111 s</td></tr>
+                <tr><td>Frames per episode</td><td class="num">1,332–1,392</td></tr>
+                <tr><td>Dataset after the run</td><td class="num">52 episodes · 70,884 frames</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div></div>
+
+        <div class="step"><span class="num">2</span><div class="body">
+          <h3>Know the features</h3>
+          <div class="tablebox">
+            <table>
+              <thead><tr><th>Feature</th><th>Shape</th><th>Contents</th></tr></thead>
+              <tbody>
+                <tr><td><code>observation.state</code></td><td>14</td><td>Left then right arm. Follower convention: <code>−degrees</code> per joint; gripper 0 (closed) to 270 (open), measured</td></tr>
+                <tr><td><code>action</code></td><td>14</td><td>Leader convention: degrees ÷ <code>[−1, −1, 1, 1, 1, −1]</code>; gripper 0 (closed) to 45 (open), commanded</td></tr>
+                <tr><td><code>observation.images.top</code></td><td>480×640×3</td><td>Video, 30 fps</td></tr>
+                <tr><td><code>observation.images.left_wrist</code></td><td>480×640×3</td><td>Video, 30 fps</td></tr>
+                <tr><td><code>observation.images.right_wrist</code></td><td>480×640×3</td><td>Video, 30 fps</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Every episode also gets an <code>episode_metadata/episode_NNNNNN.json</code> sidecar with its layout seed, so any episode can be replayed on its exact layout.</p>
+        </div></div>
+
+        <div class="step"><span class="num">3</span><div class="body">
+          <h3>Replay before you train</h3>
+          <p>A replay policy serves one recorded episode's actions through the real inference server, and the sim executes them. If the conventions, camera names or chunking were wrong, the robot's state would drift away from the recording long before the task failed.</p>
+          <div class="code"><div class="label"><span>shell</span><button type="button" data-copy>Copy</button></div><pre>cd ~/rebot-bimanual-vla
+scripts/sim_replay_test.sh ~/rebot-sim-pipeline/datasets/rebot_bimanual_stationery 0</pre></div>
+          <figure class="media narrow">
+            <img src="media/replay_top.gif" width="420" height="360" alt="Top camera view: the left arm puts the red pen in the cup, then the right arm puts the blue pen and the eraser in, replayed from the recording through the inference server">
+            <figcaption>Episode 0 replayed through the inference server, top camera, about 2.5× speed. The left arm does the red pen, then the right arm does the blue pen and the eraser.</figcaption>
+          </figure>
+          <div class="check"><b>Check</b><span>Episode 0 (layout seed 5): task succeeded, mean state drift 0.006 over 14 channels, worst 3.3 out of 270 on a gripper during a grasp (about 0.6 mm).</span></div>
+        </div></div>
+
+        <div class="step"><span class="num">4</span><div class="body">
+          <h3>Publish to the Hub</h3>
+          <div class="code"><div class="label"><span>python · LeRobot venv</span><button type="button" data-copy>Copy</button></div><pre>from pathlib import Path
+from lerobot.datasets.lerobot_dataset import LeRobotDataset
+
+root = Path.home() / "rebot-sim-pipeline/datasets/rebot_bimanual_stationery"
+ds = LeRobotDataset("kabilanKB/rebot_bimanual_stationery", root=root)
+ds.push_to_hub(private=True, tags=["rebot", "bimanual", "isaac-lab", "simulation"], license="apache-2.0")</pre></div>
+          <p><code>push_to_hub</code> uploads data, videos, metadata and the layout sidecars, writes a dataset card, and adds the <code>v3.0</code> tag that <code>LeRobotDataset</code> needs to load it from the Hub. The dataset is private at <a href="https://huggingface.co/datasets/kabilanKB/rebot_bimanual_stationery">kabilanKB/rebot_bimanual_stationery</a>.</p>
+        </div></div>
+      </section>
+
+      <!-- MODULE 3 -->
+      <section class="module" id="train">
+        <div class="mhead">
+          <span class="eyebrow">Module 3</span>
+          <div class="row"><h2>Training on different models</h2><span class="chip ok">SmolVLA trained</span></div>
+          <p>The same dataset trains any LeRobot policy. Models differ in size, in whether they read the language instruction, and in the action chunk they predict. That chunk length has to match what the inference server declares.</p>
+        </div>
+        <div class="goals">
+          <h3>You will be able to</h3>
+          <ul>
+            <li>Choose a model for the GPU and the amount of data you have.</li>
+            <li>Map the dataset's camera names onto a pretrained model's inputs.</li>
+            <li>Smoke-test a configuration in 20 steps before a multi-hour run.</li>
+          </ul>
+        </div>
+
+        <div class="models">
+          <article class="model primary">
+            <div class="row"><h3>SmolVLA</h3><span class="chip ok">Trained · 20k steps</span></div>
+            <p>Small VLA (SmolVLM2 backbone, 100 M trainable parameters) with a flow-matching action expert. Reads the instruction.</p>
+            <dl>
+              <div><dt>Start from</dt><dd><code>lerobot/smolvla_base</code></dd></div>
+              <div><dt>Chunk</dt><dd>50 steps (1.7 s)</dd></div>
+              <div><dt>Memory</dt><dd>10.6 GB at batch 32</dd></div>
+              <div><dt>Speed</dt><dd>≈ 0.7 s/step; 20k steps took 4 h 20 min</dd></div>
+              <div><dt>Serving</dt><dd>Runtime in <code>rebot_vla/smolvla.py</code></dd></div>
+            </dl>
+          </article>
+          <article class="model">
+            <div class="row"><h3>ACT</h3><span class="chip todo">Not run yet</span></div>
+            <p>Action Chunking Transformer trained from scratch. No language input. A strong, fast baseline for one fixed task.</p>
+            <dl>
+              <div><dt>Start from</dt><dd>scratch (<code>--policy.type=act</code>)</dd></div>
+              <div><dt>Chunk</dt><dd>100 by default; set 50 to compare</dd></div>
+              <div><dt>Memory</dt><dd>Smallest of the three</dd></div>
+              <div><dt>Serving</dt><dd>Needs a runtime like <code>smolvla.py</code></dd></div>
+            </dl>
+          </article>
+          <article class="model">
+            <div class="row"><h3>π0.5</h3><span class="chip todo">Not run yet</span></div>
+            <p>Large VLA from Physical Intelligence. Strongest prior, heaviest to fine-tune; a full fine-tune is unlikely to fit in 24 GB.</p>
+            <dl>
+              <div><dt>Start from</dt><dd><code>lerobot/pi05_base</code></dd></div>
+              <div><dt>Chunk</dt><dd>50 steps</dd></div>
+              <div><dt>Extra</dt><dd><code>lerobot[pi]</code></dd></div>
+              <div><dt>Serving</dt><dd>vla-edge has a π0.5 family, but it targets YAM checkpoints</dd></div>
+            </dl>
+          </article>
+        </div>
+
+        <div class="step"><span class="num">1</span><div class="body">
+          <h3>Map the cameras</h3>
+          <p><code>smolvla_base</code> was pretrained with inputs named <code>camera1</code>–<code>camera3</code>. Training fails with a feature-mismatch error until you rename the dataset's cameras. Keep vla-edge's training order: top first, then the left and right wrists. The rename is saved into the checkpoint's preprocessor, so inference reuses it automatically.</p>
+          <div class="code"><div class="label"><span>rename map</span><button type="button" data-copy>Copy</button></div><pre>{"observation.images.top": "observation.images.camera1",
+ "observation.images.left_wrist": "observation.images.camera2",
+ "observation.images.right_wrist": "observation.images.camera3"}</pre></div>
+        </div></div>
+
+        <div class="step"><span class="num">2</span><div class="body">
+          <h3>Smoke-test in 20 steps</h3>
+          <p>Run the exact command with <code>--steps=20 --batch_size=8</code> and an output directory you can throw away. On this machine it took under a minute: loss went from 2.87 to 1.14 at 3.6 GB.</p>
+        </div></div>
+
+        <div class="step"><span class="num">3</span><div class="body">
+          <h3>Full SmolVLA run</h3>
+          <div class="code"><div class="label"><span>shell · LeRobot venv</span><button type="button" data-copy>Copy</button></div><pre>~/rebot_lerobot/.venv/bin/lerobot-train \
+  --policy.path=lerobot/smolvla_base --policy.push_to_hub=false \
+  --dataset.repo_id=local/rebot_bimanual_stationery \
+  --dataset.root=$HOME/rebot-sim-pipeline/datasets/rebot_bimanual_stationery \
+  --rename_map='{"observation.images.top": "observation.images.camera1", "observation.images.left_wrist": "observation.images.camera2", "observation.images.right_wrist": "observation.images.camera3"}' \
+  --batch_size=32 --steps=20000 --log_freq=100 --save_freq=5000 --num_workers=8 \
+  --wandb.enable=false \
+  --output_dir=$HOME/rebot-bimanual-vla/outputs/smolvla_rebot_bimanual \
+  --job_name=smolvla_rebot_bimanual</pre></div>
+          <div class="tablebox">
+            <table>
+              <thead><tr><th>Step</th><th class="num">Loss</th><th>Note</th></tr></thead>
+              <tbody>
+                <tr><td>100</td><td class="num">2.557</td><td>Warm-up</td></tr>
+                <tr><td>200</td><td class="num">1.101</td><td></td></tr>
+                <tr><td>1,000</td><td class="num">0.121</td><td></td></tr>
+                <tr><td>5,000</td><td class="num">0.038</td><td>Checkpoint; used for the inference smoke test</td></tr>
+                <tr><td>10,000</td><td class="num">0.017</td><td>Checkpoint</td></tr>
+                <tr><td>15,000</td><td class="num">≈ 0.009</td><td>Checkpoint</td></tr>
+                <tr><td>20,000</td><td class="num">0.007</td><td>Final checkpoint (<code>checkpoints/last</code>)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pitfall"><b>Pitfall</b><span>The saved <code>config.json</code> lists <code>observation.state</code> with shape [6], copied from the single-arm base model. The model still uses all 14 values: SmolVLA pads whatever state it receives to 32, and the normalizer stats are 14 wide. Don't "fix" the config by hand.</span></div>
+          <div class="pitfall"><b>Pitfall</b><span><code>lerobot-train</code> needs <code>accelerate</code> from the <code>[training]</code> extra. The torchcodec errors in the log are harmless: no system FFmpeg libraries are found, so LeRobot decodes video with PyAV.</span></div>
+        </div></div>
+
+        <div class="step"><span class="num">4</span><div class="body">
+          <h3>Other models</h3>
+          <div class="code"><div class="label"><span>shell · LeRobot venv · not run yet</span><button type="button" data-copy>Copy</button></div><pre><span class="c"># ACT from scratch. Its default image keys come from the dataset, so no rename map.</span>
+~/rebot_lerobot/.venv/bin/lerobot-train --policy.type=act --policy.chunk_size=50 --policy.n_action_steps=50 \
+  --policy.push_to_hub=false \
+  --dataset.repo_id=local/rebot_bimanual_stationery \
+  --dataset.root=$HOME/rebot-sim-pipeline/datasets/rebot_bimanual_stationery \
+  --batch_size=32 --steps=50000 --wandb.enable=false \
+  --output_dir=$HOME/rebot-bimanual-vla/outputs/act_rebot_bimanual
+
+<span class="c"># π0.5 fine-tune. Install the extra first: uv pip install -e ".[pi]"</span>
+~/rebot_lerobot/.venv/bin/lerobot-train --policy.path=lerobot/pi05_base --policy.push_to_hub=false \
+  --dataset.repo_id=local/rebot_bimanual_stationery \
+  --dataset.root=$HOME/rebot-sim-pipeline/datasets/rebot_bimanual_stationery \
+  --batch_size=8 --steps=20000 --wandb.enable=false \
+  --output_dir=$HOME/rebot-bimanual-vla/outputs/pi05_rebot_bimanual</pre></div>
+          <p>Smoke-test each one first. π0.5 will likely need its camera names mapped like SmolVLA, plus a smaller batch or frozen parts to fit in 24 GB. The released YAM checkpoints expect YAM kinematics and radians, so they don't transfer to reBot without training.</p>
+        </div></div>
+      </section>
+
+      <!-- MODULE 4 -->
+      <section class="module" id="infer">
+        <div class="mhead">
+          <span class="eyebrow">Module 4</span>
+          <div class="row"><h2>Inference &amp; evaluation</h2><span class="chip ok">Evaluated · release is the gap</span></div>
+          <p>A trained checkpoint runs behind the vla-edge inference server. The Isaac Lab scene is a client: each request sends three images, the 14-value state and the instruction, and gets back a chunk of actions to execute at 30 Hz.</p>
+        </div>
+        <div class="goals">
+          <h3>You will be able to</h3>
+          <ul>
+            <li>Serve a checkpoint with <code>rebot-vla-serve</code> and inspect its contract.</li>
+            <li>Run the sim client against any server for <code>bimanual-rebot</code>.</li>
+            <li>Evaluate on layouts the model never saw and read the results.</li>
+          </ul>
+        </div>
+
+        <div class="flow" aria-label="One control cycle">
+          <div><b>Observe</b><span>Sim joints and finger openings → 14-value wire state; cameras renamed to <code>top_cam</code>, <code>left_cam</code>, <code>right_cam</code></span></div>
+          <div><b>Request</b><span><code>POST /act</code> with images, state, instruction and the episode's seed</span></div>
+          <div><b>Predict</b><span>Checkpoint processors rename, tokenize, normalize; SmolVLA returns a (50, 14) chunk</span></div>
+          <div><b>Act</b><span>Each row is converted back to radians and metres and executed; a new request every 50 steps</span></div>
+        </div>
+
+        <figure class="media narrow">
+          <img src="media/smolvla_step5000.gif" width="420" height="360" alt="Top camera view: driven by SmolVLA through the inference server, the left arm leaves home and reaches across the table toward the red pen while the right arm waits">
+          <figcaption>SmolVLA driving the scene through <code>POST /act</code> on a layout it never saw (seed 1000): the first 10 s, from the step-5,000 checkpoint, at about 2× speed. The left arm goes first, as in the demonstrations, while the right arm holds.</figcaption>
+        </figure>
+
+        <div class="step"><span class="num">1</span><div class="body">
+          <h3>Serve a checkpoint</h3>
+          <div class="code"><div class="label"><span>shell · LeRobot venv</span><button type="button" data-copy>Copy</button></div><pre>PORT=&lt;port&gt;   <span class="c"># any free port</span>
+~/rebot_lerobot/.venv/bin/rebot-vla-serve --policy smolvla-bimanual-rebot --backend torch \
+  --checkpoint outputs/smolvla_rebot_bimanual/checkpoints/last/pretrained_model \
+  --host localhost --port $PORT
+
+curl -s http://localhost:$PORT/act   <span class="c"># the contract the server enforces</span></pre></div>
+          <div class="check"><b>Check</b><span>The contract reports <code>embodiment: bimanual-rebot</code>, cameras <code>top_cam, left_cam, right_cam</code>, <code>state_dim</code> and <code>action_dim</code> 14, <code>action_horizon</code> 50.</span></div>
+        </div></div>
+
+        <div class="step"><span class="num">2</span><div class="body">
+          <h3>Evaluate on unseen layouts</h3>
+          <p>Training used layout seeds 5–6 and 100 onward. Evaluate from seed 1000 so every layout is new. The script starts the server, runs the sim with CPU physics as the data was recorded, and stops the server when it's done.</p>
+          <div class="code"><div class="label"><span>shell</span><button type="button" data-copy>Copy</button></div><pre>cd ~/rebot-bimanual-vla
+scripts/sim_policy_eval.sh outputs/smolvla_rebot_bimanual/checkpoints/last/pretrained_model 20 1000
+<span class="c"># watch it instead:  … 1 1000 -- --viz kit --realtime</span></pre></div>
+          <p>It writes <code>server.log</code>, <code>rollout.log</code>, <code>results.json</code> (success, steps, requests, server latency and the final pose of each object per episode) and <code>rollout.mp4</code> with the three cameras side by side.</p>
+          <div class="tablebox">
+            <table>
+              <thead><tr><th>Run</th><th>Checkpoint</th><th>Layouts</th><th>Result</th></tr></thead>
+              <tbody>
+                <tr><td>Replay (sanity check)</td><td>recorded episode 0</td><td>seed 5</td><td><span class="chip ok">1/1 success</span></td></tr>
+                <tr><td>Smoke test</td><td>step 5,000</td><td>seed 1000, 300 steps</td><td>Path works; left arm reaches for the red pen while the right waits; ≈ 285 ms per chunk while sharing the GPU with training</td></tr>
+                <tr><td>Final evaluation, Dell</td><td>step 20,000</td><td>seeds 1000–1004</td><td><span class="chip todo">0 / 5</span> Stopped at seed 1005, where CPU physics stalled; rerun with <code>--episode-timeout</code></td></tr>
+                <tr><td>Final evaluation, Thor (Module 5)</td><td>step 20,000</td><td>seeds 1000–1019</td><td><span class="chip ok">1 / 20</span> Seed 1015 succeeds; ≈ 278 ms per chunk</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div></div>
+
+        <div class="step"><span class="num">3</span><div class="body">
+          <h3>Read the failures</h3>
+          <p>Each object's final pose and grasp state in <code>results.json</code> show which stage of the task broke. On the Dell's first five layouts, the final checkpoint grasps the right object and carries it toward the cup, but never opens the gripper to let go. Over all 20 layouts on the Thor, it picks up at least one object in 18, and finishes the task in one.</p>
+          <div class="tablebox">
+            <table>
+              <thead><tr><th>Seed</th><th>How the episode ended (after 90 s)</th></tr></thead>
+              <tbody>
+                <tr><td>1000</td><td>All three objects grasped and held 1–2 cm from the cup centre, 3–9 cm above the table; never released</td></tr>
+                <tr><td>1001</td><td>Red pen still grasped, resting on the table 6.5 cm from the cup; right arm never started</td></tr>
+                <tr><td>1002</td><td>Red pen still grasped, 2 cm from the cup centre and 9 cm above the table; right arm never started</td></tr>
+                <tr><td>1003</td><td>Red pen still grasped, resting on the table 6.5 cm from the cup; right arm never started</td></tr>
+                <tr><td>1004</td><td>Red pen still grasped, resting on the table 13 cm from the cup; right arm never started</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pitfall"><b>Finding</b><span>Reaching, grasping and carrying work on new layouts; releasing mostly does not. A pen that is never let go means the left arm's turn never ends, so the right arm never starts. The Thor run shows the same failure, so the gap is in the model, not the hardware. Next checks: the same checkpoint on a training layout (seed 100), the 10k and 15k checkpoints, <code>--execute 25</code>, and more demonstrations around the release.</span></div>
+        </div></div>
+
+        <div class="step"><span class="num">4</span><div class="body">
+          <h3>Tune execution</h3>
+          <p><code>sim_rollout --execute N</code> runs only the first N rows of each chunk before asking again. Fewer rows react faster to what the cameras see, at the cost of more requests. Keep the full chunk when serving the replay policy: replay advances one whole chunk per request.</p>
+        </div></div>
+      </section>
+
+      <!-- MODULE 5 -->
+      <section class="module" id="hil">
+        <div class="mhead">
+          <span class="eyebrow">Module 5</span>
+          <div class="row"><h2>Hardware-in-the-loop on Jetson Thor</h2><span class="chip ok">Run · 20 episodes on Thor</span></div>
+          <p>The simulator stays on the Dell workstation, and the policy moves to the Jetson AGX Thor, the computer that would ride on the real robot. Every chunk the robot executes is computed on the deployment hardware, over a real network, before any arm moves. The sim waits for each chunk, so slow inference shows up in the timing numbers but never changes the physics.</p>
+        </div>
+        <div class="goals">
+          <h3>You will be able to</h3>
+          <ul>
+            <li>Split the loop into a simulator host and an edge inference host.</li>
+            <li>Deploy a trained checkpoint to Jetson Thor and serve it on the network.</li>
+            <li>Budget the latency of one control cycle and find where it goes.</li>
+            <li>Check that the Thor gives the same results as the workstation on the same layouts.</li>
+          </ul>
+        </div>
+
+        <div class="arch" aria-label="Hardware-in-the-loop architecture">
+          <div class="node">
+            <div class="head"><span class="eyebrow">Simulator host</span><span class="brand">Dell Pro Max 16 Plus</span><span class="addr">Ubuntu 24.04 · RTX PRO 5000</span></div>
+            <div class="stack">
+              <div class="layer"><b>Isaac Lab scene</b><span>2 × reBot B601, top + 2 wrist cameras, CPU physics at 30 Hz</span></div>
+              <div class="layer key"><b>sim_rollout client</b><span><code>wire.py</code>: sim units ↔ reBot wire values, camera renaming</span></div>
+              <div class="layer"><b>Results</b><span><code>results.json</code>, <code>rollout.mp4</code>, per-request timing</span></div>
+              <div class="layer"><b>Training</b><span>LeRobot SmolVLA, produces <code>pretrained_model/</code> (869 MB)</span></div>
+            </div>
+          </div>
+
+          <div class="link">
+            <div class="wire right"><b>POST /act</b><div class="arrow"></div><span>3 × 480×640 RGB + 14 state + instruction + seed · 3.7 MB</span></div>
+            <div class="wire left"><b>action chunk</b><div class="arrow"></div><span>50 × 14 float32 · 3.8 KB</span></div>
+            <div class="wire right once"><b>rsync, once</b><div class="arrow"></div><span>checkpoint 869 MB</span></div>
+            <div class="net">Local Wi-Fi network<br>RTT 13–29 ms · ≈ 6 MB/s</div>
+          </div>
+
+          <div class="node thor">
+            <div class="head"><span class="eyebrow">Edge inference host</span><span class="brand">NVIDIA Jetson AGX Thor</span><span class="addr">Developer Kit · JetPack 7.0</span></div>
+            <img src="media/jetson_thor.png" width="500" height="360" alt="Isometric illustration of the Jetson AGX Thor developer kit on a green base">
+            <div class="stack">
+              <div class="layer key"><b>rebot-vla-serve</b><span>vla-edge server, bound to the LAN, <code>bimanual-rebot</code> contract</span></div>
+              <div class="layer"><b>SmolVLA runtime</b><span><code>rebot_vla.smolvla</code>, step-20,000 checkpoint, CUDA</span></div>
+              <div class="layer"><b>JetPack 7.0 · L4T R38</b><span>Kernel 6.8.12-tegra, 14 CPU cores, 128 GB unified memory, power mode MAXN</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step"><span class="num">1</span><div class="body">
+          <h3>Budget one control cycle</h3>
+          <p>A 50-row chunk covers 1.67 s of robot time at 30 Hz. On the real robot, the next chunk has to arrive before the current one runs out, or the arms pause. With <code>--execute 25</code> the budget halves to 0.83 s.</p>
+          <div class="tablebox">
+            <table>
+              <thead><tr><th>Stage</th><th class="num">Time</th><th>Source</th></tr></thead>
+              <tbody>
+                <tr><td>Upload request (3.7 MB over Wi-Fi)</td><td class="num">≈ 600 ms</td><td>Measured: 5.8–6.4 MB/s from the Dell to the Thor</td></tr>
+                <tr><td>Network round trip</td><td class="num">13–29 ms</td><td>Measured with ping</td></tr>
+                <tr><td>SmolVLA inference on Thor</td><td class="num">≈ 278 ms</td><td>Measured: 274–282 ms mean per episode over 20 episodes, eager PyTorch, 10 denoising steps. 160 ms on the RTX PRO 5000</td></tr>
+                <tr><td>Return chunk (3.8 KB)</td><td class="num">&lt; 30 ms</td><td>Payload is tiny</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pitfall"><b>Finding</b><span>Over Wi-Fi, sending the images costs more than the model will. Use a cable: the Thor's USB-C device network or wired Ethernet cuts the upload to a few milliseconds. Sending JPEG instead of raw pixels would also shrink the request about 20×, but vla-edge's <code>/act</code> takes raw arrays today, so that is a protocol change.</span></div>
+        </div></div>
+
+        <div class="step"><span class="num">2</span><div class="body">
+          <h3>Prepare the Thor</h3>
+          <p>The Thor's existing LeRobot venv ran LeRobot 0.4.0 with a CPU-only PyTorch, so this loop gets its own. Build a fresh venv with the Jetson PyTorch wheel that vla-edge's own Thor installer uses, then add the three repositories. vla-edge's full <code>setup_jetson_thor.sh</code> also installs the YAM arm driver and RealSense, which this loop does not need.</p>
+          <div class="code"><div class="label"><span>shell · Dell → Thor · run on this setup</span><button type="button" data-copy>Copy</button></div><pre><span class="c"># from the Dell: copy code and the trained checkpoint into one folder on the Thor</span>
+THOR=&lt;user&gt;@&lt;thor-host&gt;
+ssh $THOR "mkdir -p ~/rebot-hil"
+rsync -a --exclude .venv --exclude .git ~/vla-edge ~/rebot-bimanual-vla ~/rebot_lerobot/lerobot $THOR:rebot-hil/
+rsync -a ~/rebot-bimanual-vla/outputs/smolvla_rebot_bimanual/checkpoints/020000/pretrained_model/ \
+      $THOR:rebot-hil/smolvla_020000/
+
+<span class="c"># on the Thor</span>
+ssh $THOR
+python3 -m venv ~/rebot-hil/.venv &amp;&amp; source ~/rebot-hil/.venv/bin/activate
+pip install torch==2.10.0 torchvision --index-url https://pypi.jetson-ai-lab.io/sbsa/cu130/+simple
+pip install nvpl-blas nvpl-lapack "nvidia-cudss-cu13&lt;1"   <span class="c"># libraries the Jetson wheel links</span>
+python ~/rebot-hil/vla-edge/scripts/jetson_thor_postinstall.py   <span class="c"># preloads them for every run of this venv</span>
+pip freeze | grep -E "^(torch|torchvision|nvpl|nvidia-cudss)" &gt; ~/rebot-hil/pins.txt
+pip install -c ~/rebot-hil/pins.txt -e ~/rebot-hil/lerobot[smolvla] -e ~/rebot-hil/vla-edge fastapi uvicorn json-numpy
+pip install --no-deps -e ~/rebot-hil/rebot-bimanual-vla
+python -c "import torch; print(torch.cuda.is_available())"   <span class="c"># must print True</span></pre></div>
+          <div class="pitfall"><b>Pitfall</b><span>If pip replaces the Jetson PyTorch wheel with a generic one while installing LeRobot, CUDA disappears; the <code>pins.txt</code> constraints file prevents that. Without the NVPL libraries, <code>import torch</code> fails with <code>libnvpl_lapack_lp64_gomp.so.0</code> missing. Torch 2.10 links <code>libcudss.so.0</code>, which only cuDSS releases before 1.0 provide. Check <code>torch.cuda.is_available()</code> after every install. The model also loads the SmolVLM2 backbone config from Hugging Face on first start, so the Thor needs internet access once, or a copy of that cache entry.</span></div>
+        </div></div>
+
+        <div class="step"><span class="num">3</span><div class="body">
+          <h3>Serve on the Thor, simulate on the Dell</h3>
+          <div class="code"><div class="label"><span>shell · run on this setup</span><button type="button" data-copy>Copy</button></div><pre><span class="c"># Thor: serve on the LAN</span>
+PORT=&lt;port&gt;   <span class="c"># use the same value on the Dell</span>
+sudo nvpmodel -m 0   <span class="c"># MAXN, already the current mode</span>
+rebot-vla-serve --policy smolvla-bimanual-rebot --backend torch \
+  --checkpoint ~/rebot-hil/smolvla_020000 --host &lt;thor-lan-address&gt; --port $PORT
+
+<span class="c"># Dell: check the contract, then run the same 20 layouts as the workstation evaluation</span>
+curl -s http://&lt;thor-host&gt;:$PORT/act
+cd ~/rebot-bimanual-vla
+PYTHONPATH="$PWD/src:$HOME/rebot-sim-pipeline/src" OMNI_KIT_ACCEPT_EULA=YES \
+  ~/miniconda3/envs/env_yamlab6/bin/python -m rebot_vla.sim_rollout \
+  --server &lt;thor-host&gt;:$PORT --device cpu --episodes 20 --seed 1000 --episode-timeout 900 \
+  --video outputs/hil_thor/rollout.mp4 --results outputs/hil_thor/results.json
+<span class="c"># add  --viz kit  to watch it in the Isaac Sim window, as in the run below</span></pre></div>
+          <div class="pitfall"><b>Pitfall</b><span>uvicorn closes an idle connection after 5 s, and executing one 50-row chunk in the sim takes about as long. The client's next request can then hit a socket the server just closed (<code>RemoteDisconnected</code>). <code>sim_rollout</code> retries once when the connection drops before any response arrives.</span></div>
+          <div class="pitfall"><b>Pitfall</b><span>The server has no authentication. Bind it to the Thor&#39;s private network address only, on a network you trust, and never expose the port to the internet.</span></div>
+        </div></div>
+
+        <div class="step"><span class="num">4</span><div class="body">
+          <h3>Compare the Thor with the workstation</h3>
+          <p>Use the same checkpoint and the same seeds. Each episode's seed also fixes SmolVLA's sampling noise, but small numeric differences between the two GPUs, and between runs of the sim, still change individual episodes: seed 1000 ended differently in two Thor runs. Compare success rates, not episodes.</p>
+          <div class="tablebox">
+            <table>
+              <thead><tr><th>Metric</th><th>Pass when</th><th>Dell (RTX PRO 5000)</th><th>Thor</th></tr></thead>
+              <tbody>
+                <tr><td>Success rate</td><td>Within a couple of episodes of the workstation run</td><td>0 / 5 (seeds 1000–1004)</td><td>1 / 20 (seeds 1000–1019); 0 / 5 on 1000–1004</td></tr>
+                <tr><td>Inference time, <code>server_ms_mean</code></td><td>Well under the 1.67 s chunk</td><td>≈ 160 ms</td><td>≈ 278 ms</td></tr>
+                <tr><td>Wall time per request, <code>wall_s</code> ÷ <code>requests</code></td><td>Under 1.67 s for real time</td><td>—</td><td>5.1 s, mostly CPU physics and rendering with the GUI open</td></tr>
+                <tr><td>Real-time behaviour, <code>--realtime</code></td><td>Arms never wait for a chunk</td><td colspan="2">Not run yet: the sim runs about 3× slower than real time</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <figure class="media narrow">
+            <img src="media/hil_thor_success_seed1015.gif" width="420" height="315" alt="Top camera view: driven by SmolVLA served from the Jetson Thor, the left arm puts one pen in the cup, the right arm adds the other pen, then the left arm drops in the eraser">
+            <figcaption>The one success on the Thor, seed 1015, from the Isaac Sim run on the Dell: the whole 55 s episode at 5× speed, top camera. Every chunk was computed on the Thor.</figcaption>
+          </figure>
+        </div></div>
+      </section>
+
+      <!-- REFERENCE -->
+      <section class="module" id="wire">
+        <div class="mhead">
+          <span class="eyebrow">Reference</span>
+          <h2>Wire format</h2>
+          <p>These values go over <code>POST /act</code>. They are the dataset's own units, so a policy trained on the dataset is served without conversion. <code>rebot_vla/wire.py</code> converts to and from simulator units using <code>rebot_sim_pipeline.conventions</code>, the same code that recorded the data.</p>
+        </div>
+        <div class="tablebox">
+          <table>
+            <thead><tr><th>Field</th><th>Per arm (left, then right)</th><th>Units</th></tr></thead>
+            <tbody>
+              <tr><td><code>state</code> [0:7], [7:14]</td><td>shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_yaw, wrist_roll, gripper</td><td>−degrees; gripper 0–270 measured</td></tr>
+              <tr><td>action rows (chunk × 14)</td><td>same joints, leader convention</td><td>degrees ÷ [−1, −1, 1, 1, 1, −1]; gripper 0–45 commanded</td></tr>
+              <tr><td><code>top_cam</code>, <code>left_cam</code>, <code>right_cam</code></td><td>dataset <code>top</code>, <code>left_wrist</code>, <code>right_wrist</code></td><td>uint8 RGB, 480×640</td></tr>
+              <tr><td><code>seed</code></td><td>one per episode; restarts replay and fixes SmolVLA's sampling noise</td><td>int</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <span>Status as of 24 October 2026. Repositories: rebot-sim-pipeline, rebot-bimanual-vla, vla-edge, LeRobot 0.6.2.</span>
+    <span>Green chips mark steps verified on this machine; amber chips mark runs in progress; grey chips mark steps not run yet.</span>
+  </footer>
+</div>
+
+<script>
+document.querySelectorAll("[data-copy]").forEach(function (button) {
+  button.addEventListener("click", function () {
+    var pre = button.closest(".code").querySelector("pre");
+    var text = pre.innerText;
+    var done = function (label) { button.textContent = label; setTimeout(function () { button.textContent = "Copy"; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done("Copied"); }, function () { selectText(pre); done("Selected"); });
+    } else { selectText(pre); done("Selected"); }
+  });
+});
+function selectText(node) {
+  var range = document.createRange(); range.selectNodeContents(node);
+  var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+}
+</script>
+</body>
+</html>
