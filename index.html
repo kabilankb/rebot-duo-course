@@ -48,6 +48,7 @@ code { font-family: var(--mono); font-size: 0.86em; background: var(--tint); pad
 
 /* Header */
 header.top { padding-block: 48px 28px; border-bottom: 1px solid var(--rule); display: grid; gap: 16px; }
+header.top .arch.hero { margin-top: 8px; }
 header.top .lede { font-size: 1.08rem; color: var(--muted); max-width: 70ch; }
 .meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font: 0.8rem/1.4 var(--mono); color: var(--muted); }
 .meta b { color: var(--ink); font-weight: 500; }
@@ -213,6 +214,34 @@ footer { border-top: 1px solid var(--rule); padding-block: 22px 40px; font-size:
       <span>Control <b>30 Hz, absolute joint targets</b></span>
       <span>Data <b>52 episodes · 70,884 frames</b></span>
       <span>Workstation <b>Dell Pro Max 16 Plus · RTX PRO 5000 24 GB</b></span>
+    </div>
+    <div class="arch hero" aria-label="Hardware-in-the-loop overview">
+      <div class="node">
+        <div class="head"><span class="eyebrow">Simulator host</span><span class="brand">Dell Pro Max 16 Plus</span><span class="addr">Ubuntu 24.04 · RTX PRO 5000</span></div>
+        <div class="stack">
+          <div class="layer"><b>Isaac Lab scene</b><span>2 × reBot B601, top + 2 wrist cameras, CPU physics at 30 Hz</span></div>
+          <div class="layer key"><b>sim_rollout client</b><span><code>wire.py</code>: sim units ↔ reBot wire values, camera renaming</span></div>
+          <div class="layer"><b>Results</b><span><code>results.json</code>, <code>rollout.mp4</code>, per-request timing</span></div>
+          <div class="layer"><b>Training</b><span>LeRobot SmolVLA, produces <code>pretrained_model/</code> (869 MB)</span></div>
+        </div>
+      </div>
+
+      <div class="link">
+        <div class="wire right"><b>POST /act</b><div class="arrow"></div><span>3 × 480×640 RGB + 14 state + instruction + seed · 3.7 MB</span></div>
+        <div class="wire left"><b>action chunk</b><div class="arrow"></div><span>50 × 14 float32 · 3.8 KB</span></div>
+        <div class="wire right once"><b>rsync, once</b><div class="arrow"></div><span>checkpoint 869 MB</span></div>
+        <div class="net">Local Wi-Fi network<br>RTT 13–29 ms · ≈ 6 MB/s</div>
+      </div>
+
+      <div class="node thor">
+        <div class="head"><span class="eyebrow">Edge inference host</span><span class="brand">NVIDIA Jetson AGX Thor</span><span class="addr">Developer Kit · JetPack 7.0</span></div>
+        <img src="media/jetson_thor.png" width="500" height="360" alt="Isometric illustration of the Jetson AGX Thor developer kit on a green base">
+        <div class="stack">
+          <div class="layer key"><b>rebot-vla-serve</b><span>vla-edge server, bound to the LAN, <code>bimanual-rebot</code> contract</span></div>
+          <div class="layer"><b>SmolVLA runtime</b><span><code>rebot_vla.smolvla</code>, step-20,000 checkpoint, CUDA</span></div>
+          <div class="layer"><b>JetPack 7.0 · L4T R38</b><span>Kernel 6.8.12-tegra, 14 CPU cores, 128 GB unified memory, power mode MAXN</span></div>
+        </div>
+      </div>
     </div>
   </header>
 
