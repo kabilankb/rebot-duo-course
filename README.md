@@ -17,7 +17,7 @@ on an NVIDIA Jetson AGX Thor.
 | 0 | Workstation setup | Isaac Lab 3 / Isaac Sim 6, LeRobot, vla-edge on a Dell Pro Max 16 Plus (RTX PRO 5000 Blackwell) |
 | 1 | The bimanual scene | Two reBot B601 arms, a top camera and two wrist cameras, CPU physics at 30 Hz |
 | 2 | Data collection | 52 scripted demonstrations, 70,884 frames, LeRobot v3 format |
-| 3 | Training on different models | SmolVLA fine-tuned for 20k steps; ACT and π0.5 recipes |
+| 3 | Training on different models | SmolVLA fine-tuned for 20k steps ([weights](https://huggingface.co/kabilanKB/smolvla_rebot_bimanual_stationery)); ACT and π0.5 recipes |
 | 4 | Inference & evaluation | Serve a checkpoint over `POST /act` and evaluate on layouts the model never saw |
 | 5 | Hardware-in-the-loop on Jetson Thor | Simulator on the Dell, every action chunk computed on the Thor |
 | — | Wire format | State and action conventions shared by the dataset, the server and the arms |

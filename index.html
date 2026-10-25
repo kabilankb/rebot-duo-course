@@ -515,6 +515,7 @@ ds.push_to_hub(
               <div><dt>Memory</dt><dd>10.6 GB at batch 32</dd></div>
               <div><dt>Speed</dt><dd>≈ 0.7 s/step; 20k steps took 4 h 20 min</dd></div>
               <div><dt>Serving</dt><dd>Runtime in <code>rebot_vla/smolvla.py</code></dd></div>
+              <div><dt>Weights</dt><dd><a href="https://huggingface.co/kabilanKB/smolvla_rebot_bimanual_stationery">kabilanKB/smolvla_rebot_bimanual_stationery</a> on Hugging Face</dd></div>
             </dl>
           </article>
           <article class="model">
@@ -579,6 +580,7 @@ ds.push_to_hub(
               </tbody>
             </table>
           </div>
+          <p>All four checkpoints are public at <a href="https://huggingface.co/kabilanKB/smolvla_rebot_bimanual_stationery">kabilanKB/smolvla_rebot_bimanual_stationery</a>. The final 20,000-step model is at the repo root and the others are under <code>checkpoints/005000</code>, <code>010000</code> and <code>015000</code>. Pass the repo id as <code>--policy.path</code>, or download it with <code>hf download kabilanKB/smolvla_rebot_bimanual_stationery</code>.</p>
           <div class="pitfall"><b>Pitfall</b><span>The saved <code>config.json</code> lists <code>observation.state</code> with shape [6], copied from the single-arm base model. The model still uses all 14 values: SmolVLA pads whatever state it receives to 32, and the normalizer stats are 14 wide. Don't "fix" the config by hand.</span></div>
           <div class="pitfall"><b>Pitfall</b><span><code>lerobot-train</code> needs <code>accelerate</code> from the <code>[training]</code> extra. The torchcodec errors in the log are harmless: no system FFmpeg libraries are found, so LeRobot decodes video with PyAV.</span></div>
         </div></div>
