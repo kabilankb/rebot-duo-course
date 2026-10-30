@@ -57,7 +57,7 @@ not 0..1, so the embodiment declares no vla-edge gripper channels.
 [rebot-duo-course](https://github.com/kabilankb/rebot-duo-course) repository
 (`rebot-sim-pipeline/` and `package/`). Clone it, then link them to the paths used below:
 `ln -s ~/rebot-duo-course/rebot-sim-pipeline ~/rebot-sim-pipeline && ln -s ~/rebot-duo-course/package ~/rebot-bimanual-vla`.
-The recorded dataset is not included: generate it with `rebot-bimanual-generate` (see `rebot-sim-pipeline/BIMANUAL.md`).
+The recorded dataset is public on Hugging Face: `hf download kabilanKB/rebot_bimanual_stationery --repo-type dataset --local-dir ~/rebot-sim-pipeline/datasets/rebot_bimanual_stationery`. You can also generate your own with `rebot-bimanual-generate` (see `rebot-sim-pipeline/BIMANUAL.md`).
 
 | Environment | Used for | Install |
 |---|---|---|

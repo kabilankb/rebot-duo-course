@@ -559,7 +559,7 @@ ds.push_to_hub(
     tags=["rebot", "bimanual", "isaac-lab", "simulation"],
     license="apache-2.0",
 )</pre></div>
-          <p><code>push_to_hub</code> uploads data, videos, metadata and the layout sidecars, writes a dataset card, and adds the <code>v3.0</code> tag that <code>LeRobotDataset</code> needs to load it from the Hub. The dataset is private at <a href="https://huggingface.co/datasets/kabilanKB/rebot_bimanual_stationery">kabilanKB/rebot_bimanual_stationery</a>. The recorded data is not shipped with the course: generate your own with the <code>rebot-bimanual-generate</code> command above, which writes <code>~/rebot-sim-pipeline/datasets/rebot_bimanual_stationery</code>, the path the later commands expect.</p>
+          <p><code>push_to_hub</code> uploads data, videos, metadata and the layout sidecars, writes a dataset card, and adds the <code>v3.0</code> tag that <code>LeRobotDataset</code> needs to load it from the Hub. The dataset is public at <a href="https://huggingface.co/datasets/kabilanKB/rebot_bimanual_stationery">kabilanKB/rebot_bimanual_stationery</a>. To skip recording, download it to the path the later commands expect: <code>hf download kabilanKB/rebot_bimanual_stationery --repo-type dataset --local-dir ~/rebot-sim-pipeline/datasets/rebot_bimanual_stationery</code>. Or generate your own with the <code>rebot-bimanual-generate</code> command above, which writes to the same path.</p>
         </div></div>
       </section>
 
