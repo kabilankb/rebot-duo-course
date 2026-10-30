@@ -351,6 +351,43 @@ ln -s ~/rebot-duo-course/rebot-sim-pipeline ~/rebot-sim-pipeline</pre></div>
         </div></div>
 
         <div class="step"><span class="num">2</span><div class="body">
+          <h3>Isaac Sim and Isaac Lab (<code>env_yamlab6</code>)</h3>
+          <p>The scene, the scripted expert and the sim client run in a Conda environment that holds Isaac Sim 6.0.1 and Isaac Lab 3 from pip. This workstation has Python 3.12, <code>isaacsim</code> 6.0.1.0, PyTorch 2.10 (CUDA 12.8) and Isaac Lab <code>v3.0.0-beta2.patch1</code> installed from source (<code>isaaclab</code> 6.1.17). The environment name is only a label: the course scripts expect it at <code>~/miniconda3/envs/env_yamlab6</code>. You need an NVIDIA RTX GPU and driver 580.95.05 or later (this workstation: 595.99.02).</p>
+          <div class="code"><div class="label"><span>shell</span><button type="button" data-copy>Copy</button></div><pre><span class="c"># 1. Python 3.12 environment</span>
+conda create -n env_yamlab6 python=3.12 -y
+conda activate env_yamlab6
+pip install uv
+
+<span class="c"># 2. Isaac Sim 6.0.1 from NVIDIA's package index</span>
+uv pip install "isaacsim[all,extscache]==6.0.1.0" \
+  --extra-index-url https://pypi.nvidia.com \
+  --index-strategy unsafe-best-match --prerelease=allow
+
+<span class="c"># 3. PyTorch built for CUDA 12.8 (x86_64)</span>
+uv pip install -U torch==2.10.0 torchvision==0.25.0 \
+  --index-url https://download.pytorch.org/whl/cu128
+
+<span class="c"># 4. Isaac Lab 3 from source</span>
+cd ~ &amp;&amp; git clone https://github.com/isaac-sim/IsaacLab.git
+cd IsaacLab &amp;&amp; git checkout v3.0.0-beta2.patch1
+./isaaclab.sh -i
+
+<span class="c"># 5. Check that the simulator starts (first start downloads extensions and is slow)</span>
+OMNI_KIT_ACCEPT_EULA=YES python -c "from isaaclab.app import AppLauncher; print('ok')"</pre></div>
+          <div class="check"><b>Check</b><span><code>pip list</code> shows <code>isaacsim 6.0.1.0</code> and <code>isaaclab</code>, and the last command prints <code>ok</code>.</span></div>
+          <h3>NVIDIA GB10 and other aarch64 machines</h3>
+          <p>This course was built and tested on the x86_64 workstation above, not on an aarch64 machine. Isaac Lab documents aarch64 support for the DGX Spark, which uses the same GB10 chip, with the changes below. Treat them as untested here and report what you find.</p>
+          <ul>
+            <li>Use driver 580.142 or later, as Isaac Lab recommends for the Spark.</li>
+            <li>aarch64 needs CUDA 13, so replace step 3 with the <code>cu130</code> PyTorch wheels: <code>--index-url https://download.pytorch.org/whl/cu130</code>.</li>
+            <li><code>imgui-bundle</code> and <code>quadprog</code> are built from source, so install the headers before step 4: <code>sudo apt install python3.12-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev</code>.</li>
+            <li>If you see <code>cannot be preloaded</code> warnings about <code>libgomp</code>, set <code>LD_PRELOAD=/lib/aarch64-linux-gnu/libgomp.so.1</code>. If importing <code>torch</code> fails with <code>cannot allocate memory in static TLS block</code>, preload <code>omni/client/libcarb.so</code> from the Isaac Sim package; <code>./isaaclab.sh -p</code> does this for you.</li>
+            <li>Livestream, SkillGen and XR teleoperation are not supported on the Spark. The course uses none of them.</li>
+          </ul>
+          <p>Details: the <a href="https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html">Isaac Lab installation guide</a>.</p>
+        </div></div>
+
+        <div class="step"><span class="num">3</span><div class="body">
           <h3>Install</h3>
           <div class="code"><div class="label"><span>shell</span><button type="button" data-copy>Copy</button></div><pre><span class="c"># server + tests (vla-edge venv)</span>
 python3 -m venv ~/vla-edge/.venv
@@ -371,7 +408,7 @@ uv pip install --python ~/rebot_lerobot/.venv/bin/python --no-deps \
   -e ~/vla-edge -e ~/rebot-bimanual-vla</pre></div>
         </div></div>
 
-        <div class="step"><span class="num">3</span><div class="body">
+        <div class="step"><span class="num">4</span><div class="body">
           <h3>Unit tests</h3>
           <div class="code"><div class="label"><span>shell</span><button type="button" data-copy>Copy</button></div><pre>cd ~/rebot-bimanual-vla &amp;&amp; ~/vla-edge/.venv/bin/pytest -q</pre></div>
           <div class="check"><b>Check</b><span>10 passed: registration of both policies, wire conversions, the replay server over HTTP.</span></div>
