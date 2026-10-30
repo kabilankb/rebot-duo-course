@@ -1,0 +1,89 @@
+# =====================================================================
+# Bimanual stationery sorting: two reBot arms put two pens and an eraser
+# into one pencil cup, pens standing upright.
+#
+# Each object is assigned to one arm (`objects.<name>.arm`, or `any` to draw
+# it per episode); the arms work one at a time in `order`.
+# XY are world coordinates of the YAMLab station; every height (z) here is
+# measured from the table top (robot YAML table_z).
+# Keys here OVERRIDE defaults.yaml.
+# =====================================================================
+
+task_name: StationerySorting-Bimanual-v0
+task_description: "Put the two pens and the eraser into the pencil cup"
+
+# Relative to the reBot project root.
+stationery_usd: assets/stationery/stationery_models.usd
+
+objects:
+  pen_red:
+    source_prim: /Stationery/PenRed
+    arm: left_arm
+    mass: 0.012
+    pen_half_length_m: 0.068       # capsule along local X (grasp assist + expert)
+    radius_m: 0.0040
+  pen_blue:
+    source_prim: /Stationery/PenBlue
+    arm: right_arm
+    mass: 0.012
+    pen_half_length_m: 0.078
+    radius_m: 0.0047
+  eraser:
+    source_prim: /Stationery/Eraser
+    arm: any
+    mass: 0.025
+    box_half_extents_m: [0.0223, 0.0093, 0.0053]
+
+# Pens first, so they stand on the flat cup floor.
+order: [pen_red, pen_blue, eraser]
+
+object_physics:
+  static_friction: 1.8
+  dynamic_friction: 1.5
+  contact_offset: 0.002
+  max_depenetration_velocity: 0.25
+  spawn_z_m: 0.012                 # dropped from this height onto the table
+
+cup:
+  source_prim: /Stationery/Pencilcup
+  center_xy: [0.45, 0.0]           # between the arms, 0.363 m from each base
+  top_z: 0.0839                    # rim
+  floor_z: 0.008                   # inner floor (bbox min + 0.008, as the single-arm app)
+  # Pen slots either side of the centre along world Y: the left arm's pen on +Y.
+  pen_slots_xy:
+    pen_red: [0.0, 0.014]
+    pen_blue: [0.0, -0.014]
+
+# Object layout per reset (rebot_sim_pipeline.bimanual.sample_bimanual_layout).
+layout:
+  center_radius_m: [0.18, 0.35]
+  bounds_x_m: [0.33, 0.97]         # YAMLab table: x 0.2995 .. 1.0015
+  bounds_y_m: [-0.52, 0.52]        #               y -0.55 .. 0.55
+  robot_base_clearance_m: 0.13
+  keep_out_circles:
+    - {center_xy_m: [0.45, 0.0], radius_m: 0.085}
+  min_separation_m: 0.05
+  footprint_half_length_m: {pen_red: 0.068, pen_blue: 0.078, eraser: 0.0223}
+  yaw_deg: [-180.0, 180.0]
+  max_attempts: 500
+
+# Success (the single-arm app's checker, around the shared cup).
+success:
+  cup_radius_m: 0.038              # object origin within this of the cup centre (XY)
+  z_range_m: [0.01, 0.16]
+  pen_min_vertical: 0.55           # |world z of the pen axis|; about 57 deg tilt
+  max_speed_mps: 0.25
+  hold_s: 0.35
+
+# Scripted expert (rebot_sim_pipeline.expert.ExpertTuning + per-turn timing).
+expert:
+  home_deg: [0.0, -45.0, -45.0, 0.0, 0.0, 0.0]
+  pen_grip_from_center_m: 0.035
+  pregrasp_height_m: 0.07
+  lift_height_m: 0.13
+  settle_s: 0.5                    # after reset, before recording
+  final_hold_s: 2.0                # last turn only; lets the success check settle
+
+modes:
+  evaluation:
+    sim: {episode_length_s: 90.0}

@@ -45,6 +45,7 @@ The package this course uses is
 index.html   the course, one self-contained page (Google Fonts are the only external request)
 media/       GIFs and images the page shows
 .nojekyll    tells GitHub Pages to serve the files as they are
+rebot-sim-pipeline/  scene, scripted expert and dataset generator (Isaac Lab)
 package/     the rebot-bimanual-vla Python package: embodiment, SmolVLA runtime, sim client, tests
 ```
 

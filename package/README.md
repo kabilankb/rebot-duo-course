@@ -53,9 +53,15 @@ not 0..1, so the embodiment declares no vla-edge gripper channels.
 
 ## Install (this machine)
 
+`rebot-sim-pipeline` and this package ship in the
+[rebot-duo-course](https://github.com/kabilankb/rebot-duo-course) repository
+(`rebot-sim-pipeline/` and `package/`). Clone it, then link them to the paths used below:
+`ln -s ~/rebot-duo-course/rebot-sim-pipeline ~/rebot-sim-pipeline && ln -s ~/rebot-duo-course/package ~/rebot-bimanual-vla`.
+The recorded dataset is not included: generate it with `rebot-bimanual-generate` (see `rebot-sim-pipeline/BIMANUAL.md`).
+
 | Environment | Used for | Install |
 |---|---|---|
-| `~/vla-edge/.venv` (Python 3.14) | the server and the unit tests | `python3 -m venv ~/vla-edge/.venv && ~/vla-edge/.venv/bin/pip install -e "~/vla-edge[dev]" pyarrow` then `pip install --no-deps -e ~/rebot-sim-pipeline -e .` |
+| `~/vla-edge/.venv` (Python 3.14) | the server and the unit tests | `python3 -m venv ~/vla-edge/.venv && ~/vla-edge/.venv/bin/pip install --build-constraint $HOME/vla-edge/build-constraints.txt -e "$HOME/vla-edge[dev]" pyarrow` then `pip install --no-deps -e ~/rebot-sim-pipeline -e .` |
 | `env_yamlab6` (Isaac Lab 3) | the sim client | `pip install json-numpy && pip install --no-deps -e ~/vla-edge`; this repo and rebot-sim-pipeline go on `PYTHONPATH` (the script does it) |
 
 On Jetson Thor (JetPack 7), see [Hardware in the loop on Jetson Thor](#hardware-in-the-loop-on-jetson-thor).

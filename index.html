@@ -340,14 +340,22 @@ footer { border-top: 1px solid var(--rule); padding-block: 22px 40px; font-size:
 
         <div class="step"><span class="num">1</span><div class="body">
           <h3>Repositories</h3>
-          <p><code>rebot-sim-pipeline</code> holds the scene and data generator. <code>rebot-bimanual-vla</code> holds the embodiment, the policy runtimes and the sim client. <code>vla-edge</code> is the serving stack. The single-arm <code>rebot-arm-dli-isaacsim</code> project supplies robot, camera and stationery assets.</p>
+          <p><code>rebot-sim-pipeline</code> (the <code>rebot-sim-pipeline/</code> folder of this repo) holds the scene and data generator. <code>rebot-bimanual-vla</code> (the <code>package/</code> folder) holds the embodiment, the policy runtimes and the sim client. <code>vla-edge</code> is the serving stack. The single-arm <code>rebot-arm-dli-isaacsim</code> project supplies robot, camera and stationery assets.</p>
+          <div class="code"><div class="label"><span>shell</span><button type="button" data-copy>Copy</button></div><pre>cd ~
+git clone https://github.com/Agents2AgentsAI/vla-edge.git
+git clone https://github.com/yuyoujiang/rebot-arm-dli-isaacsim.git
+git clone https://github.com/kabilankb/rebot-duo-course.git
+<span class="c"># both project packages live in this course repo</span>
+ln -s ~/rebot-duo-course/package ~/rebot-bimanual-vla
+ln -s ~/rebot-duo-course/rebot-sim-pipeline ~/rebot-sim-pipeline</pre></div>
         </div></div>
 
         <div class="step"><span class="num">2</span><div class="body">
           <h3>Install</h3>
           <div class="code"><div class="label"><span>shell</span><button type="button" data-copy>Copy</button></div><pre><span class="c"># server + tests (vla-edge venv)</span>
 python3 -m venv ~/vla-edge/.venv
-~/vla-edge/.venv/bin/pip install -e "$HOME/vla-edge[dev]" pyarrow
+~/vla-edge/.venv/bin/pip install --build-constraint ~/vla-edge/build-constraints.txt \
+  -e "$HOME/vla-edge[dev]" pyarrow
 ~/vla-edge/.venv/bin/pip install --no-deps \
   -e ~/rebot-sim-pipeline -e ~/rebot-bimanual-vla
 

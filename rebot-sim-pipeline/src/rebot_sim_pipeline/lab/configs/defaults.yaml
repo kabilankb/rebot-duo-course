@@ -1,0 +1,32 @@
+# =====================================================================
+# Global defaults for the reBot bimanual Isaac Lab tasks.
+#
+# Layers, lowest -> highest precedence (configs/loader in lab/config.py):
+#   defaults (this file) < defaults.modes[mode] < tasks/<task>.yaml
+#     < tasks/<task>.yaml.modes[mode] < CLI overrides
+# Nested dicts merge key by key; scalars and lists replace.
+# Robot facts live in robot/rebot_b601_bimanual.yaml, not here.
+# =====================================================================
+
+sim:
+  dt: 0.00833333333333        # 1/120 s -> 120 Hz physics (as the single-arm app)
+  decimation: 4               # 30 Hz control and recording
+  render_interval: 4
+  device: cpu
+  num_envs: 1
+  episode_length_s: 120.0
+
+rendering:
+  width: 640
+  height: 480
+
+recording:
+  jpeg_quality: 92
+
+modes:
+  generate:                    # scripted expert -> staged episodes
+    sim: {device: cpu, num_envs: 1}
+  view:                        # GUI look at the scene, no recording
+    sim: {device: cpu, num_envs: 1}
+  evaluation:                  # trained policy rollouts
+    sim: {device: cuda:0, num_envs: 1}

@@ -1,0 +1,149 @@
+# =====================================================================
+# Two reBot B601 arms (Seeed, 6 revolute joints + 2-finger prismatic gripper).
+#
+# Robot facts, not experiment knobs: geometry and calibration taken from the
+# single-arm project (rebot-arm-dli-isaacsim: assets/rebot_physx, build_scene.py).
+# The station is YAMLab's: its workstation USD (table, walls, camera gate),
+# arm mounts and top camera, in YAMLab's world frame (floor at z = 0, table top
+# at table_z, arms on the near table edge facing +X).
+# Quaternions in this file are wxyz.
+# =====================================================================
+
+# Relative to the reBot project root (found via $REBOT_HOME, a sibling checkout
+# or ~/rebot-arm-dli-isaacsim). The generated wrapper adds the Seeed materials.
+usd_path: assets/rebot_physx/00-arm-rs_asm-v3.usd
+
+# YAMLab workstation, relative to the installed `yamlab` package (or $YAMLAB_HOME/yamlab).
+workstation_usd: robot/yam/workstation/workstation.usd
+table_z: 0.7517          # table top (YAMLab yam.yaml table.position z)
+
+# YAMLab's arm mounts (yam.yaml arms), both facing +X at joint-1 zero (robot's left = +Y).
+arms:
+  left_arm:
+    prim_name: LeftArm
+    position: [0.2525, 0.305, 0.7517]
+    yaw_deg: 0.0
+  right_arm:
+    prim_name: RightArm
+    position: [0.2525, -0.305, 0.7517]
+    yaw_deg: 0.0
+
+arm_joints: [joint1, joint2, joint3, joint4, joint5, joint6]
+gripper_joints: [joint_left, joint_right]   # same target on both; q = per-finger opening
+end_effector_link: link6
+finger_links: [gripper_left, gripper_right]
+
+# Kinematic chain base_link -> link6 (USD physics-joint frames, used for IK).
+chain:
+  - {name: joint1, type: revolute, axis: Z, local_pos0: [-0.00034283, -0.00098683, 0.075], local_rot0_wxyz: [1, 0, 0, 0], local_pos1: [0, 0, 0], local_rot1_wxyz: [1, 0, 0, 0]}
+  - {name: joint2, type: revolute, axis: Z, local_pos0: [0.020343, 0.027237, 0.07], local_rot0_wxyz: [0, 0, 0.7071055, -0.7071081], local_pos1: [0, 0, 0], local_rot1_wxyz: [0, 0, 1, 0]}
+  - {name: joint3, type: revolute, axis: Z, local_pos0: [-0.236, 0, 0], local_rot0_wxyz: [1, 0, 0, 0], local_pos1: [0, 0, 0], local_rot1_wxyz: [1, 0, 0, 0]}
+  - {name: joint4, type: revolute, axis: Z, local_pos0: [0.228, -0.072746, 0.0045], local_rot0_wxyz: [1, 0, 0, 0], local_pos1: [0, 0, 0], local_rot1_wxyz: [1, 0, 0, 0]}
+  - {name: joint5, type: revolute, axis: Z, local_pos0: [0.087, -0.048, -0.03075], local_rot0_wxyz: [0.7071055, -0.7071081, 0, 0], local_pos1: [0, 0, 0], local_rot1_wxyz: [1, 0, 0, 0]}
+  - {name: joint6, type: revolute, axis: Z, local_pos0: [0.0365, 0, 0.048], local_rot0_wxyz: [0.7071055, 0, 0.7071081, 0], local_pos1: [0, 0, 0], local_rot1_wxyz: [1, 0, 0, 0]}
+
+# Joint limits (rad) of the USD; the IK clips to these.
+arm_lower: [-2.8000, -3.1400, -3.1400, -1.7900, -1.5700, -3.1400]
+arm_upper: [2.8000, 0.0, 0.0, 1.6900, 1.5700, 3.1400]
+
+gripper:
+  open_m: 0.05      # per finger; 0 = closed (fingertips touch)
+  closed_m: 0.0
+  # end_effector_link frame
+  grasp_offset: [0.0, 0.0, 0.09121]   # between the finger roots
+  fingertip: [0.0, 0.0, 0.16621]       # centre of the fingertips
+  finger_axis: [0.0, 1.0, 0.0]         # closing direction
+  approach_axis: [0.0, 0.0, 1.0]
+
+# Implicit PD drives. The arm links ignore gravity (like YAMLab's YAM), so these
+# only have to track the smooth expert/teleop targets.
+actuators:
+  arm:      {joints: "joint[1-6]", stiffness: 400.0, damping: 40.0, effort_limit: 36.0, velocity_limit: 12.0}
+  gripper:  {joints: "joint_(left|right)", stiffness: 1200.0, damping: 30.0, effort_limit: 12.0, velocity_limit: 0.08}
+solver_position_iterations: 32
+solver_velocity_iterations: 1
+finger_friction: {static: 2.4, dynamic: 2.0}
+
+# Grasp assist (from rebot-arm-dli-isaacsim teleop_config.json): a closed gripper
+# within reach of an object carries it rigidly; opening drops it.
+grasp_assist:
+  enabled: true
+  probe_half_span_m: 0.045    # sample points along the approach axis around grasp_offset
+  probe_samples: 7
+  max_distance_m: 0.040
+  lock_opening_m: 0.022       # contact lock: freeze the fingers while closing
+  attach_command_m: 0.014
+  attach_opening_m: 0.028
+  release_m: 0.026            # command and opening above this release
+
+# Cameras. A camera is placed by `position` + `quaternion_opengl` (wxyz, camera
+# looks along -Z with +Y up) or by look-at (`eye`, `target`, `up`), in the world
+# for fixed cameras and in the end_effector_link frame for wrist cameras.
+cameras:
+  top:                       # YAMLab's calibrated top camera on the gate (yam.yaml cameras.top)
+    lerobot_key: top
+    position: [0.08600512146949768, -0.008999999612569809, 1.7043205499649048]
+    quaternion_opengl: [0.68301, 0.18301, -0.18301, -0.68301]
+    focal_length: 12.84      # fx 392.2 px at 640 px over a 20.955 mm aperture
+    horizontal_aperture: 20.955
+    vertical_aperture: 15.71625
+  left_wrist:
+    lerobot_key: left_wrist
+    arm: left_arm
+    eye: [0.065394, 0.0, 0.096031]
+    target: [0.0, 0.0, 0.235]
+    up: [0.9048, 0.0, 0.4258]
+    focal_length: 4.2
+    horizontal_aperture: 20.955
+    vertical_aperture: 15.71625
+  right_wrist:
+    lerobot_key: right_wrist
+    arm: right_arm
+    eye: [0.065394, 0.0, 0.096031]
+    target: [0.0, 0.0, 0.235]
+    up: [0.9048, 0.0, 0.4258]
+    focal_length: 4.2
+    horizontal_aperture: 20.955
+    vertical_aperture: 15.71625
+
+# Visual model of the wrist camera on end_effector_link (build_scene.py _add_uvc32_camera_model):
+# the Seeed UVC32 mount plus a 32 mm camera board with its lens. Visual only.
+wrist_camera_model:
+  mount_usd: assets/camera/UVC32_mount_portable.usd   # relative to the reBot project
+  mount_z: 0.09
+  mount_yaw_deg: -90.0
+  board_center: [0.0685, 0.0, 0.08444]
+  board_pitch_deg: 15.0
+
+# Seeed reBot colours (build_scene.py ROBOT_MATERIAL_SPECS / ROBOT_VISUAL_MATERIALS):
+# the PhysX asset ships plain grey, so the wrapper binds these per visual part.
+appearance:
+  materials:   # name: [diffuse rgb, roughness, metallic]
+    ReBotGreen: [[0.278, 0.616, 0.298], 0.45, 0.0]
+    ReBotBlack: [[0.055, 0.055, 0.062], 0.55, 0.0]
+    ReBotAluminium: [[0.78, 0.80, 0.83], 0.32, 0.85]
+    ReBotMotor: [[0.13, 0.13, 0.14], 0.38, 0.6]
+  bindings:
+    base_link/visuals/base_link: ReBotAluminium
+    link1/visuals/link1: ReBotAluminium
+    link2/visuals/motor_2_3: ReBotMotor
+    link2/visuals/cnc2: ReBotAluminium
+    link2/visuals/pla2_black: ReBotBlack
+    link2/visuals/pla2_green: ReBotGreen
+    link3/visuals/cnc3: ReBotAluminium
+    link3/visuals/motor_4: ReBotMotor
+    link3/visuals/pla3_black: ReBotBlack
+    link3/visuals/pla3_green: ReBotGreen
+    link4/visuals/motor_5: ReBotMotor
+    link4/visuals/cnc4: ReBotAluminium
+    link5/visuals/motor_6: ReBotMotor
+    link5/visuals/cnc5: ReBotAluminium
+    link5/visuals/pla5_green: ReBotGreen
+    link6/visuals/link6: ReBotAluminium
+    link6/visuals/pla7_green: ReBotGreen
+    link6/visuals/cnc7: ReBotAluminium
+    link6/visuals/motor_7: ReBotMotor
+    gripper_left/visuals/pla_left: ReBotBlack
+    gripper_left/visuals/cnc_left: ReBotAluminium
+    gripper_right/visuals/pla_right: ReBotBlack
+    gripper_right/visuals/cnc_right: ReBotAluminium

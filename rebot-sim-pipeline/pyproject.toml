@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rebot-sim-pipeline"
+version = "0.1.0"
+description = "Scripted-expert pick-and-place demonstrations and reachable-workspace layout sampling for the reBot arm"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+# Isaac Lab tasks (lab/): the YAML loader. Isaac Lab itself comes with the
+# simulator's Python; the dataset writer needs a LeRobot with dataset v3
+# (tested with 0.6.2) in its own venv.
+lab = ["pyyaml>=6"]
+
+[project.scripts]
+rebot-sim-generate = "rebot_sim_pipeline.cli:main"
+rebot-bimanual-generate = "rebot_sim_pipeline.bimanual_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"rebot_sim_pipeline.lab" = ["configs/*.yaml", "configs/*/*.yaml"]
