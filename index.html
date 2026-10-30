@@ -522,7 +522,7 @@ ds.push_to_hub(
     tags=["rebot", "bimanual", "isaac-lab", "simulation"],
     license="apache-2.0",
 )</pre></div>
-          <p><code>push_to_hub</code> uploads data, videos, metadata and the layout sidecars, writes a dataset card, and adds the <code>v3.0</code> tag that <code>LeRobotDataset</code> needs to load it from the Hub. The dataset is private at <a href="https://huggingface.co/datasets/kabilanKB/rebot_bimanual_stationery">kabilanKB/rebot_bimanual_stationery</a>.</p>
+          <p><code>push_to_hub</code> uploads data, videos, metadata and the layout sidecars, writes a dataset card, and adds the <code>v3.0</code> tag that <code>LeRobotDataset</code> needs to load it from the Hub. The dataset is private at <a href="https://huggingface.co/datasets/kabilanKB/rebot_bimanual_stationery">kabilanKB/rebot_bimanual_stationery</a>. The recorded data is not shipped with the course: generate your own with the <code>rebot-bimanual-generate</code> command above, which writes <code>~/rebot-sim-pipeline/datasets/rebot_bimanual_stationery</code>, the path the later commands expect.</p>
         </div></div>
       </section>
 
@@ -886,7 +886,7 @@ PYTHONPATH="$PWD/src:$HOME/rebot-sim-pipeline/src" OMNI_KIT_ACCEPT_EULA=YES \
   </div>
 
   <footer>
-    <span>Status as of 24 October 2026. Repositories: rebot-sim-pipeline, rebot-bimanual-vla, vla-edge, LeRobot 0.6.2.</span>
+    <span>Status as of 30 October 2026. Repositories: rebot-sim-pipeline, rebot-bimanual-vla, vla-edge, LeRobot 0.6.2.</span>
     <span>Green chips mark steps verified on this machine; amber chips mark runs in progress; grey chips mark steps not run yet.</span>
   </footer>
 </div>
